@@ -1,4 +1,4 @@
-import os, sys, aiohttp, asyncio
+import os, sys, aiohttp, asyncio, json
 from datetime import datetime
 from colorama import Fore, Style
 
@@ -47,7 +47,9 @@ async def ping(proxy=None, token=None):
         while True:
             try:
                 res = await session.get(ip_url)
-                jres = await res.json()
+                open("http.log", "a").write(await res.text() + "\n")
+                text_res = await res.text()
+                jres = json.loads(text_res)
                 ip = jres.get("ip")
                 country = jres.get("country")
                 log(f"{putih}ip client : {hijau}{ip} {putih}country : {hijau}{country}")
@@ -61,7 +63,7 @@ async def ping(proxy=None, token=None):
             try:
                 res = await session.post(url=ping_url, json={"type": "extension"})
                 open("http.log", "a").write(await res.text() + "\n")
-                if res.status != 201 or res.status != 200:
+                if res.status != 201 and res.status != 200:
                     log(
                         f"{kuning}failed get respon ({putih}{ip}{kuning}), http status : {res.status}"
                     )
@@ -72,7 +74,7 @@ async def ping(proxy=None, token=None):
                 if "Node added successfully" in message:
                     log(f"{hijau}Successfully added nodes from {putih}{ip}")
                 elif "Ping successful" in message:
-                    log(f"{hijau}Sending pings from {putih}{ip}")
+                    log(f"{hijau}Sending ping from {putih}{ip}")
                 await countdowna(60)
             except KeyboardInterrupt:
                 sys.exit()
