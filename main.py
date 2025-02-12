@@ -35,7 +35,7 @@ async def ping(proxy=None, token=None):
         "sec-fetch-site": "none",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
     }
-    ip_url = "https://api.bigdatacloud.net/data/client-ip"
+    ip_url = "https://directory.cookieyes.com/api/v1/ip"
     ping_url = f"https://{HOST}/api/user/nodes/ping"
     async with aiohttp.ClientSession(
         headers={
@@ -47,8 +47,9 @@ async def ping(proxy=None, token=None):
             try:
                 res = await session.get(ip_url)
                 jres = await res.json()
-                ip = jres.get("ipString")
-                log(f"{putih}ip client : {hijau}{ip}")
+                ip = jres.get("ip")
+                country = jres.get("country")
+                log(f"{putih}ip client : {hijau}{ip} {putih}country : {hijau}{country}")
                 break
             except KeyboardInterrupt:
                 sys.exit()
@@ -59,7 +60,7 @@ async def ping(proxy=None, token=None):
             try:
                 res = await session.post(url=ping_url, json={"type": "extension"})
                 open("http.log", "a").write(await res.text() + "\n")
-                if res.status != 201:
+                if res.status != 201 or res.status != 200:
                     log(
                         f"{kuning}failed get respon ({putih}{ip}{kuning}), http status : {res.status}"
                     )
