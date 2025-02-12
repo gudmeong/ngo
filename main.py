@@ -114,6 +114,7 @@ async def main():
         )
         sys.exit()
     print()
+    token = token.splitlines()[0]
     tasks = [asyncio.create_task(ping(proxy=proxy, token=token)) for proxy in proxies]
     await asyncio.gather(*tasks)
 
