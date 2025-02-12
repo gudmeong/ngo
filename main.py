@@ -37,11 +37,17 @@ async def ping(proxy=None, token=None):
     }
     ip_url = "https://api.bigdatacloud.net/data/client-ip"
     ping_url = f"https://{HOST}/api/user/nodes/ping"
-    async with aiohttp.ClientSession(headers=headers, proxy=proxy) as session:
+    async with aiohttp.ClientSession(
+        headers={
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+        },
+        proxy=proxy,
+    ) as session:
         res = await session.get(ip_url)
         jres = await res.json()
         ip = jres.get("ipString")
         log(f"{putih}ip client : {hijau}{ip}")
+    async with aiohttp.ClientSession(headers=headers, proxy=proxy) as session:
         while True:
             try:
                 res = await session.post(url=ping_url, json={"type": "extension"})
