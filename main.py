@@ -43,10 +43,17 @@ async def ping(proxy=None, token=None):
         },
         proxy=proxy,
     ) as session:
-        res = await session.get(ip_url)
-        jres = await res.json()
-        ip = jres.get("ipString")
-        log(f"{putih}ip client : {hijau}{ip}")
+        while True:
+            try:
+                res = await session.get(ip_url)
+                jres = await res.json()
+                ip = jres.get("ipString")
+                log(f"{putih}ip client : {hijau}{ip}")
+                break
+            except KeyboardInterrupt:
+                sys.exit()
+            except Exception as e:
+                log(f"{kuning}error {e}")
     async with aiohttp.ClientSession(headers=headers, proxy=proxy) as session:
         while True:
             try:
