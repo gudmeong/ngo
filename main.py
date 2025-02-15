@@ -1,5 +1,5 @@
 import os, sys, aiohttp, asyncio, json
-from datetime import datetime
+from datetime import datetime, timezone
 from colorama import Fore, Style
 
 hitam = Fore.LIGHTBLACK_EX
@@ -16,6 +16,60 @@ HOST = "".join([chr(_ - 5) for _ in [115, 116, 105, 106, 108, 116, 51, 102, 110]
 def log(msg):
     now = datetime.now().isoformat(" ").split(".")[0]
     print(f"{hitam}[{now}]{reset} {msg}{reset}")
+
+
+async def checkin(proxy=None, token=None):
+    me_url = "https://nodego.ai/api/user/me"
+    checkin_url = "https://nodego.ai/api/user/checkin"
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": f"Bearer {token}",
+        "connection": "keep-alive",
+        "content-type": "application/json",
+        "host": HOST,
+        "origin": "https://app.nodego.ai",
+        "sec-ch-ua": '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "none",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    }
+    async with aiohttp.ClientSession(headers=headers, proxy=proxy) as session:
+        while True:
+            try:
+                res = await session.get(url=me_url)
+                if res.status != 200:
+                    log(f"{kuning}failed get account data !")
+                    await countdowna(30)
+                    continue
+                text_res = await res.text()
+                json_res = json.loads(text_res)
+                metadata = json_res.get("metadata", {})
+                last_checkin = metadata.get("lastCheckinAt", "not_found")
+                if last_checkin == "not_found":
+                    log(f"{kuning}failed get last checkin !")
+                    continue
+                if last_checkin is not None:
+                    last_checkin = last_checkin.split("T")[0]
+                now = datetime.now(tz=timezone.utc)
+                today = now.isoformat().split("T")[0]
+                if last_checkin != today:
+                    res = await session.post(url=checkin_url)
+                    text_res = await res.text()
+                    if res.status != 201:
+                        log(f"{kuning}failed check in today {putih}{today}")
+                        continue
+                    log(f"{hijau}success check in today {putih}{today}")
+                    continue
+                log(f"{kuning}already check in today {putih}{today}")
+                await asyncio.sleep(86400)
+            except KeyboardInterrupt:
+                sys.exit()
+            except Exception as e:
+                log(f"{kuning}error : {e}")
 
 
 async def ping(proxy=None, token=None):
@@ -47,7 +101,6 @@ async def ping(proxy=None, token=None):
         while True:
             try:
                 res = await session.get(ip_url)
-                open("http.log", "a").write(await res.text() + "\n")
                 text_res = await res.text()
                 jres = json.loads(text_res)
                 ip = jres.get("ip")
@@ -57,7 +110,7 @@ async def ping(proxy=None, token=None):
             except KeyboardInterrupt:
                 sys.exit()
             except Exception as e:
-                log(f"{kuning}error {e}")
+                log(f"{kuning}error : {e}")
     async with aiohttp.ClientSession(headers=headers, proxy=proxy) as session:
         while True:
             try:
@@ -127,6 +180,7 @@ async def main():
     print()
     token = token.splitlines()[0]
     tasks = [asyncio.create_task(ping(proxy=proxy, token=token)) for proxy in proxies]
+    tasks.append(asyncio.create_task(checkin(proxy=proxies[0], token=token)))
     await asyncio.gather(*tasks)
 
 

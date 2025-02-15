@@ -29,6 +29,10 @@ copy(localStorage.getItem('accessToken').replaceAll('"',''))
 ```
 6. Kode diatas otomatis copy akses token / token akun di clipboard, kemudian paste di file token.txt
 
+# Rekomendasi proxy?
+
+Jika kamu bertanya kepada saya tentang rekomendasi proxy, saya hanya bisa menyarankan [webshare](https://www.webshare.io/?referral_code=dwj0m9cdi4mp) karena saya menggunakan ini. Pada saat awal saya menggunakan [dataimpulse](https://dataimpulse.com/?aff=48082).
+
 # Cara menggunakan
 
 Jika kamu ingin menggunakan proxy maka isi file proxies.txt dengan proxy kamu. Gunakan format :

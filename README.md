@@ -30,6 +30,10 @@ copy(localStorage.getItem('accessToken').replaceAll('"',''))
 
 6. The code above will automatically copy the access token / account token to your clipboard, then paste it in the token.txt file
 
+# Proxy recommendations?
+
+If you ask me about proxy recommendations, I can only suggest [webshare](https://www.webshare.io/?referral_code=dwj0m9cdi4mp) because I use this. In the early days I used [dataimpulse](https://dataimpulse.com/?aff=48082).
+
 # How to use
 
 If you want to use a proxy, fill the proxies.txt file with your proxy. Use this format:
