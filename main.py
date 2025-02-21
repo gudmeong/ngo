@@ -1,26 +1,29 @@
-import os, sys, aiohttp, asyncio, json
+import os, sys, aiohttp, asyncio, json, logging
 from datetime import datetime, timezone
-from colorama import Fore, Style
-
-hitam = Fore.LIGHTBLACK_EX
-kuning = Fore.LIGHTYELLOW_EX
-merah = Fore.LIGHTRED_EX
-biru = Fore.LIGHTBLUE_EX
-hijau = Fore.LIGHTGREEN_EX
-reset = Style.RESET_ALL
-putih = Fore.LIGHTWHITE_EX
+from pytz import utc, timezone as zones
 
 HOST = "".join([chr(_ - 5) for _ in [115, 116, 105, 106, 108, 116, 51, 102, 110]])
 
+TOKEN = os.getenv("TOKEN", "")
+PROXY = os.getenv("PROXY", "")
 
-def log(msg):
-    now = datetime.now().isoformat(" ").split(".")[0]
-    print(f"{hitam}[{now}]{reset} {msg}{reset}")
+logger = logging.getLogger(__name__)
+
+def custom_time(*args):
+    utc_time = datetime.utcnow()
+    local_time = utc_time.replace(tzinfo=utc).astimezone(zones("Asia/Jakarta"))
+    return local_time.timetuple()
+
+
+def setup_logger():
+    format_log = "[%(levelname)s] - [%(asctime)s - %(name)s - %(message)s] -> [%(module)s:%(lineno)d]"
+    logging.basicConfig(format=format_log, level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
+    logging.Formatter.converter = custom_time
 
 
 async def checkin(proxy=None, token=None):
-    me_url = "https://nodego.ai/api/user/me"
-    checkin_url = "https://nodego.ai/api/user/checkin"
+    me_url = f"https://{HOST}/api/user/me"
+    checkin_url = f"https://{HOST}/api/user/checkin"
     headers = {
         "accept": "application/json, text/plain, */*",
         "accept-language": "en-US,en;q=0.9",
@@ -28,7 +31,7 @@ async def checkin(proxy=None, token=None):
         "connection": "keep-alive",
         "content-type": "application/json",
         "host": HOST,
-        "origin": "https://app.nodego.ai",
+        "origin": f"https://app.{HOST}",
         "sec-ch-ua": '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
@@ -42,7 +45,7 @@ async def checkin(proxy=None, token=None):
             try:
                 res = await session.get(url=me_url)
                 if res.status != 200:
-                    log(f"{kuning}failed get account data !")
+                    logger.warning("failed get account data!")
                     await countdowna(30)
                     continue
                 text_res = await res.text()
@@ -50,7 +53,8 @@ async def checkin(proxy=None, token=None):
                 metadata = json_res.get("metadata", {})
                 last_checkin = metadata.get("lastCheckinAt", "not_found")
                 if last_checkin == "not_found":
-                    log(f"{kuning}failed get last checkin !")
+                    logger.warning("failed get last checkin! Return json:")
+                    logger.info(json.dumps(json_res, indent=2))
                     continue
                 if last_checkin is not None:
                     last_checkin = last_checkin.split("T")[0]
@@ -60,16 +64,17 @@ async def checkin(proxy=None, token=None):
                     res = await session.post(url=checkin_url)
                     text_res = await res.text()
                     if res.status != 201:
-                        log(f"{kuning}failed check in today {putih}{today}")
+                        logger.error(f"failed check in today ( {today} )")
+                        logger.info(json.dumps(json.loads(text_res), indent=2))
                         continue
-                    log(f"{hijau}success check in today {putih}{today}")
+                    logger.info(f"success check in today ( {today} )")
                     continue
-                log(f"{kuning}already check in today {putih}{today}")
+                logger.info(f"already check in today ( {today} )")
                 await asyncio.sleep(86400)
             except KeyboardInterrupt:
-                sys.exit()
+                sys.exit(1)
             except Exception as e:
-                log(f"{kuning}error : {e}")
+                logger.error(f"ERROR: {e}")
 
 
 async def ping(proxy=None, token=None):
@@ -105,34 +110,34 @@ async def ping(proxy=None, token=None):
                 jres = json.loads(text_res)
                 ip = jres.get("ip")
                 country = jres.get("country")
-                log(f"{putih}ip client : {hijau}{ip} {putih}country : {hijau}{country}")
+                logger.info(f"ip client : {ip} country : {country}")
                 break
             except KeyboardInterrupt:
-                sys.exit()
+                sys.exit(1)
             except Exception as e:
-                log(f"{kuning}error : {e}")
+                logger.error(f"ERROR: {e}")
     async with aiohttp.ClientSession(headers=headers, proxy=proxy) as session:
         while True:
             try:
                 res = await session.post(url=ping_url, json={"type": "extension"})
                 open("http.log", "a").write(await res.text() + "\n")
-                if res.status != 201 and res.status != 200:
-                    log(
-                        f"{kuning}failed get respon ({putih}{ip}{kuning}), http status : {res.status}"
+                if res.status not in [201, 200]:
+                    logger.warning(
+                        f"failed get respon ( {ip} ), http status : {res.status}"
                     )
                     await countdowna(60)
                     continue
                 jres = await res.json()
                 message = jres.get("message")
                 if "Node added successfully" in message:
-                    log(f"{hijau}Successfully added nodes from {putih}{ip}")
+                    logger.info(f"Successfully added nodes from ( {ip} )")
                 elif "Ping successful" in message:
-                    log(f"{hijau}Sending ping from {putih}{ip}")
+                    logger.info(f"Sending ping from ( {ip} )")
                 await countdowna(60)
             except KeyboardInterrupt:
-                sys.exit()
+                sys.exit(1)
             except Exception as e:
-                log(f"{kuning}error : {e}")
+                logger.info(f"ERROR: {e}")
 
 
 async def countdowna(t):
@@ -155,29 +160,32 @@ async def countdowna(t):
 
 
 async def main():
-    os.system("cls" if os.name == "nt" else "clear")
+    setup_logger()
     print(
         f"""
-{biru}┏┓┳┓┏┓  ┏┓    •      
-{biru}┗┓┃┃┗┓  ┃┃┏┓┏┓┓┏┓┏╋  
-{biru}┗┛┻┛┗┛  ┣┛┛ ┗┛┃┗ ┗┗  
-{biru}              ┛      
-{putih}> N O D E G O . A I 
-{putih}> to perform PING !
-{putih}> t.me/sdsproject
+┏┓┳┓┏┓  ┏┓    •      
+┗┓┃┃┗┓  ┃┃┏┓┏┓┓┏┓┏╋  
+┗┛┻┛┗┛  ┣┛┛ ┗┛┃┗ ┗┗  
+              ┛      
+> N O D E G O . A I 
+> to perform PING !
+> t.me/sdsproject
 """
     )
-    proxies = open("proxies.txt").read().splitlines()
-    token = open("token.txt").read()
-    print(f"{hijau}total proxy : {putih}{len(proxies)}")
+    proxies = PROXY.splitlines()
+    token = TOKEN
+    if not TOKEN:
+        logger.info("Token not exists! Exiting.....")
+        sys.exit(1)
+    logger.info(f"total proxy : {len(proxies)}")
     if len(proxies) <= 0:
         proxies = [None]
     if len(token) <= 100:
-        print(
-            f"{kuning}Please fill in the token.txt file with the account access token.{reset}"
+        logger.warning(
+            f"Please fill in the token.txt file with the account access token"
         )
-        sys.exit()
-    print()
+        sys.exit(1)
+    
     token = token.splitlines()[0]
     tasks = [asyncio.create_task(ping(proxy=proxy, token=token)) for proxy in proxies]
     tasks.append(asyncio.create_task(checkin(proxy=proxies[0], token=token)))
@@ -188,4 +196,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        sys.exit()
+        sys.exit(1)

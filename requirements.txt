@@ -1,2 +1,4 @@
 aiohttp
 colorama
+python-dotenv
+pytz
